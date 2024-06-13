@@ -1,12 +1,35 @@
 import path from 'path';
 import fs from 'fs';
+import _ from 'lodash';
+
+const readFile = (filepath) => {
+    const pathF = path.resolve(process.cwd(), filepath)
+    return JSON.parse(fs.readFileSync(pathF, 'utf-8'));
+}
 
 const gendiff = (filepath1, filepath2) => {
-    const [path1, path2] = [path.resolve(process.cwd(), filepath1),
-path.resolve(process.cwd(), filepath2)]
-    const data1 = JSON.parse(fs.readFileSync(path1, 'utf-8'));
-    const data2 = JSON.parse(fs.readFileSync(path2, 'utf-8'));
-    return [data1, data2];
+    const data1 = readFile(filepath1);
+    const data2 = readFile(filepath2);
+
+    const keys =(_.union(_.keys(data1), _.keys(data2))).sort();
+    const diffObj = keys.map((key) => {
+        //если в первом, но не во втором
+        if(_.has(data1, key) && !_.has(data2, key)) {
+            return `  - ${key}: ${data1[key]}`;
+        }
+        //если во втором, но не в первом
+        if(_.has(data2, key) && !_.has(data1, key)) {
+            return `  + ${key}: ${data2[key]}`;
+        }
+        //есть и в первом, и во втором, но разные значения
+        if (data1[key] !== data2[key]) {
+            return `  - ${key}: ${data1[key]}\n  + ${key}: ${data2[key]}`;
+        }
+        //есть и в первом, и во втором, но значения одинаковые
+        return `    ${key}: ${data1[key]}`;
+    })
+
+    return `{\n${diffObj.join('\n')}\n}`;
 }
 
 export default gendiff;
